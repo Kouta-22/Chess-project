@@ -17,11 +17,22 @@ class GameState():
         self.whiteToMove = True
         self.moveLog = []
 
+        self.whiteKingLocation = (7, 4)
+        self.blackKingLocation = (0, 4)
+
+
+
     def makeMove(self, move):
         self.board[move.startRow][move.startCol] = "--"
         self.board[move.endRow][move.endCol] = move.pieceMoved
         self.moveLog.append(move)
         self.whiteToMove = not self.whiteToMove
+
+        # atualiza a localização do rei
+        if move.pieceMoved == 'wK':
+            self.whiteKingLocation = (move.endRow, move.endCol)
+        elif move.pieceMoved == 'bK':
+            self.blackKingLocation = (move.endRow, move.endCol)
 
 
 
@@ -31,11 +42,53 @@ class GameState():
             self.board[move.startRow][move.startCol] = move.pieceMoved
             self.board[move.endRow][move.endCol] = move.pieceCaptured
             self.whiteToMove = not self.whiteToMove # troca o turno de volta
+            if move.pieceMoved == 'wK':
+                self.whiteKingLocation = (move.startRow, move.startCol)
+            elif move.pieceMoved == 'bK':
+                self.blackKingLocation = (move.startRow, move.startCol)            
 
 
     # considera que todos os movimentos são cheks
     def getValidMoves(self):
-        return self.getAllPossibleMoves()
+        # Gerar todos os movimentos
+        moves = self.getAllPossibleMoves()
+        # para cada movimento
+        for i in range(len(moves)-1, -1, -1): # ir para trás para remover itens sem afetar o loop
+            self.makeMove(moves[i])
+
+            self.whiteToMove = not self.whiteToMove
+            if self.inCheck():
+                moves.remove(moves[i]) # movimento deixa o rei em cheque
+            self.whiteToMove = not self.whiteToMove
+            self.undoMove()
+
+        
+        return moves
+
+
+#####
+##
+    def inCheck(self):
+        if self.whiteToMove:
+            return self.squareUnderAttack(self.whiteKingLocation[0], self.whiteKingLocation[1])
+        else:
+            return self.squareUnderAttack(self.blackKingLocation[0], self.blackKingLocation[1])
+        
+
+    def squareUnderAttack(self, r, c):
+        self.whiteToMove = not self.whiteToMove # turno inimigo
+        oppMove = self.getAllPossibleMoves()
+        self.whiteToMove = not self.whiteToMove
+        for move in oppMove:
+            if move.endRow == r and move.endCol == c: # se o movimento inimigo pode alcançar o rei
+                return True
+        return False
+    
+
+    
+
+
+
 
     def getAllPossibleMoves(self):
         moves = []
@@ -70,20 +123,30 @@ class GameState():
                     if  c + 1 <= 7: #captura para direita
                         if self.board[r+1][c+1][0] == 'w': #peça inimiga
                             moves.append(Move((r,c), (r+1,c+1), self.board))
+
+    
+    def getKnightMoves(self, r, c, moves):
+        knigthMoves = ((-2,-1), (-2,1), (-1,-2), (-1,2), (1,-2), (1,2), (2,-1), (2,1))
+        allyColor = "w" if self.whiteToMove else "b"
+        for m in knigthMoves:
+            endRow = r + m[0]
+            endCol = c + m[1]
+            if 0 <= endRow < 8 and 0 <= endCol < 8: #limites do tabuleiro
+                endPiece = self.board[endRow][endCol]
+                if endPiece[0] != allyColor: #casa vazia ou inimigo
+                    moves.append(Move((r,c), (endRow, endCol), self.board))
+
         
 
-
-                    
-    def getRookMoves(self, r, c, moves):
-        directions = ((-1,0), (0,-1), (1,0), (0,1))
+    def getSlidingMoves(self, r, c, moves, directions, maxSteps = 8):
         enemyColor = "b" if self.whiteToMove else "w"
         for d in directions:
-            for i in range(1,8):
-                endRow = r +d[0]*i
-                endCol = c +d[1]*i
-                if 0 <= endRow < 8 and 0 <= endCol < 8: # limites do tabuleiro
+            for i in range(1, maxSteps + 1): # limite de casa
+                endRow = r + d[0]*i
+                endCol = c + d[1]*i
+                if 0 <= endRow < 8 and 0 <= endCol < 8: #limites do tabuleiro
                     endPiece = self.board[endRow][endCol]
-                    if endPiece == "--": # casa vazia
+                    if endPiece == "--": #casa vazia
                         moves.append(Move((r,c), (endRow, endCol), self.board))
                     elif endPiece[0] == enemyColor: #inimigo valido
                         moves.append(Move((r,c), (endRow, endCol), self.board))
@@ -93,18 +156,21 @@ class GameState():
                 else: # fora do tabuleiro
                     break
 
+    def getRookMoves(self, r, c, moves):
+        directions = ((-1,0), (0,-1), (1,0), (0,1))
+        self.getSlidingMoves(r, c, moves, directions)
 
-
-
-    def getKnightMoves(self, r, c, moves):
-        pass
     def getBishopMoves(self, r, c, moves):
-        pass
+        directions = ((-1,-1), (-1,1), (1, -1), (1,1))
+        self.getSlidingMoves(r, c, moves, directions)
+
     def getQueenMoves(self, r, c, moves):
-        pass
+        directions = ((-1,0), (0,-1), (1,0), (0,1),(-1,-1), (-1,1), (1, -1), (1,1))
+        self.getSlidingMoves(r, c, moves, directions, maxSteps=8)
+
     def getKingMoves(self, r, c, moves):
-        pass
-        
+        directions = ((-1,-1), (-1,0), (-1,1), (0,-1), (0,1), (1,-1), (1,0), (1,1))
+        self.getSlidingMoves(r, c, moves, directions, maxSteps=1) # o rei se move apenas uma casa
 
 
 
