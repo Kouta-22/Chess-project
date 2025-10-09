@@ -19,6 +19,9 @@ class GameState():
 
         self.whiteKingLocation = (7, 4)
         self.blackKingLocation = (0, 4)
+        self.pins = []
+        self.checks = []
+        
 
 
 
@@ -33,6 +36,15 @@ class GameState():
             self.whiteKingLocation = (move.endRow, move.endCol)
         elif move.pieceMoved == 'bK':
             self.blackKingLocation = (move.endRow, move.endCol)
+
+        #Promoção de peão não implementada
+
+        if move.pieceMoved == 'wP' and move.endRow == 0:
+            move.isPromotion = True
+        elif move.pieceMoved == 'bP' and move.endRow == 7:
+            move.isPromotion = True
+        else:
+            move.isPromotion = False
 
 
 
@@ -50,20 +62,31 @@ class GameState():
 
     # considera que todos os movimentos são cheks
     def getValidMoves(self):
-        # Gerar todos os movimentos
+        """
+        Gera movimentos e filtra os que deixam o rei que acabou de mover em cheque.
+        Observação: assume que Move.pieceMoved foi preenchido corretamente na criação do Move.
+        """
         moves = self.getAllPossibleMoves()
-        # para cada movimento
-        for i in range(len(moves)-1, -1, -1): # ir para trás para remover itens sem afetar o loop
-            self.makeMove(moves[i])
+        validMoves = []
+        for move in moves:
+            # simula o movimento
+            self.makeMove(move)
 
-            self.whiteToMove = not self.whiteToMove
-            if self.inCheck():
-                moves.remove(moves[i]) # movimento deixa o rei em cheque
-            self.whiteToMove = not self.whiteToMove
+            # quem moveu? (pode usar move.pieceMoved[0])
+            moverColor = move.pieceMoved[0]  # 'w' ou 'b'
+            attackerColor = 'b' if moverColor == 'w' else 'w'
+            # posição do rei da cor que acabou de mover
+            kingRow, kingCol = (self.whiteKingLocation if moverColor == 'w'
+                                else self.blackKingLocation)
+
+            # se o rei do jogador que moveu NÃO estiver sob ataque do inimigo, o movimento é válido
+            if not self.squareUnderAttack(kingRow, kingCol, attackerColor):
+                validMoves.append(move)
+
+            # desfaz a simulação
             self.undoMove()
 
-        
-        return moves
+        return validMoves
 
 
 #####
@@ -75,17 +98,75 @@ class GameState():
             return self.squareUnderAttack(self.blackKingLocation[0], self.blackKingLocation[1])
         
 
-    def squareUnderAttack(self, r, c):
-        self.whiteToMove = not self.whiteToMove # turno inimigo
-        oppMove = self.getAllPossibleMoves()
-        self.whiteToMove = not self.whiteToMove
-        for move in oppMove:
-            if move.endRow == r and move.endCol == c: # se o movimento inimigo pode alcançar o rei
-                return True
-        return False
-    
+    def squareUnderAttack(self, r, c, attackerColor=None):
+        """
+        Retorna True se a casa (r, c) está atacada por alguma peça da cor attackerColor.
+        Se attackerColor for None, assume o inimigo baseado em self.whiteToMove (fallback).
+        """
+        if attackerColor is None:
+            attackerColor = "b" if self.whiteToMove else "w"
 
-    
+        # 1. Peões (ataques diagonais)
+        if attackerColor == "w":
+            pawnAttacks = [(1, -1), (1, 1)]  # brancos atacam pra cima (rei preto está acima)
+        else:
+            pawnAttacks = [(-1, -1), (-1, 1)]  # pretos atacam pra baixo (rei branco está abaixo)
+
+        for d in pawnAttacks:
+            endRow, endCol = r + d[0], c + d[1]
+            if 0 <= endRow < 8 and 0 <= endCol < 8:
+                if self.board[endRow][endCol] == attackerColor + "P":
+                    return True
+
+        # 2. Cavalo
+        knightMoves = [(-2, -1), (-2, 1), (-1, -2), (-1, 2),
+                    (1, -2), (1, 2), (2, -1), (2, 1)]
+        for d in knightMoves:
+            endRow, endCol = r + d[0], c + d[1]
+            if 0 <= endRow < 8 and 0 <= endCol < 8:
+                if self.board[endRow][endCol] == attackerColor + "N":
+                    return True
+
+        # 3. Torre e Dama (linhas e colunas)
+        directions_straight = [(-1, 0), (0, -1), (1, 0), (0, 1)]
+        for d in directions_straight:
+            for i in range(1, 8):
+                endRow, endCol = r + d[0] * i, c + d[1] * i
+                if not (0 <= endRow < 8 and 0 <= endCol < 8):
+                    break
+                piece = self.board[endRow][endCol]
+                if piece != "--":
+                    if piece[0] == attackerColor and (piece[1] == "R" or piece[1] == "Q"):
+                        return True
+                    else:
+                        break
+
+        # 4. Bispo e Dama (diagonais)
+        directions_diag = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
+        for d in directions_diag:
+            for i in range(1, 8):
+                endRow, endCol = r + d[0] * i, c + d[1] * i
+                if not (0 <= endRow < 8 and 0 <= endCol < 8):
+                    break
+                piece = self.board[endRow][endCol]
+                if piece != "--":
+                    if piece[0] == attackerColor and (piece[1] == "B" or piece[1] == "Q"):
+                        return True
+                    else:
+                        break
+
+        # 5. Rei inimigo (uma casa de distância)
+        kingMoves = [(-1, -1), (-1, 0), (-1, 1),
+                    (0, -1),          (0, 1),
+                    (1, -1), (1, 0),  (1, 1)]
+        for d in kingMoves:
+            endRow, endCol = r + d[0], c + d[1]
+            if 0 <= endRow < 8 and 0 <= endCol < 8:
+                if self.board[endRow][endCol] == attackerColor + "K":
+                    return True
+
+        return False
+
 
 
 
@@ -106,23 +187,23 @@ class GameState():
                 moves.append(Move((r,c), (r-1,c), self.board))
                 if r ==6 and self.board[r-2][c] == "--":
                     moves.append(Move((r,c), (r-2,c), self.board))
-                if c - 1 >= 0:#captura para esquerda
-                    if self.board[r-1][c-1][0] == 'b': #peça inimiga
-                        moves.append(Move((r,c), (r-1,c-1), self.board))
-                    if  c + 1 <= 7: #captura para direita
-                        if self.board[r-1][c+1][0] == 'b': #peça inimiga
-                            moves.append(Move((r,c), (r-1,c+1), self.board))
+            if c - 1 >= 0:#captura para esquerda
+                if self.board[r-1][c-1][0] == 'b': #peça inimiga
+                    moves.append(Move((r,c), (r-1,c-1), self.board))
+            if  c + 1 <= 7: #captura para direita
+                if self.board[r-1][c+1][0] == 'b': #peça inimiga
+                    moves.append(Move((r,c), (r-1,c+1), self.board))
         else: # movimento do peão preto
             if self.board[r+1][c] == "--":
                 moves.append(Move((r,c), (r+1,c), self.board))
                 if r == 1 and self.board[r+2][c] == "--":
                     moves.append(Move((r,c), (r+2,c), self.board))
-                if c - 1 >= 0:#captura para esquerda
-                    if self.board[r+1][c-1][0] == 'w': #peça inimiga
-                        moves.append(Move((r,c), (r+1,c-1), self.board))
-                    if  c + 1 <= 7: #captura para direita
-                        if self.board[r+1][c+1][0] == 'w': #peça inimiga
-                            moves.append(Move((r,c), (r+1,c+1), self.board))
+            if c - 1 >= 0:#captura para esquerda
+                if self.board[r+1][c-1][0] == 'w': #peça inimiga
+                    moves.append(Move((r,c), (r+1,c-1), self.board))
+            if  c + 1 <= 7: #captura para direita
+                if self.board[r+1][c+1][0] == 'w': #peça inimiga
+                    moves.append(Move((r,c), (r+1,c+1), self.board))
 
     
     def getKnightMoves(self, r, c, moves):

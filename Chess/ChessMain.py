@@ -45,6 +45,11 @@ def main():
                     print(move.getChessNotation())
                     if move in validMoves:
                         gs.makeMove(move)
+                            if move.isPromotion:
+                                promotedPiece = choosePromotionPiece(screen, gs.whiteToMove)
+
+                                gs.board[move.endRow][move.endCol] = ('w' if gs.whiteToMove else 'b') + promotedPiece
+
                         moveMade = True
                         sqSelected = () # resetar selecao
                         playerClicks = []
@@ -88,6 +93,9 @@ def drawPieces(screen, board):
             piece = board[r][c]
             if piece != "--":  # not empty square
                 screen.blit(IMAGES[piece], p.Rect(c * SQ_SIZE, r * SQ_SIZE, SQ_SIZE, SQ_SIZE))
+
+def choosePromotionPiece(screen, isWhite):
+    pass                
 
 if __name__ == "__main__":
     main()
