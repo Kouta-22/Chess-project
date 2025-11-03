@@ -45,10 +45,10 @@ def main():
                     print(move.getChessNotation())
                     if move in validMoves:
                         gs.makeMove(move)
-                            if move.isPromotion:
-                                promotedPiece = choosePromotionPiece(screen, gs.whiteToMove)
+                        if move.isPromotion:
+                            promotedPiece = choosePromotionPiece(screen, gs.whiteToMove)
 
-                                gs.board[move.endRow][move.endCol] = ('w' if gs.whiteToMove else 'b') + promotedPiece
+                            gs.board[move.endRow][move.endCol] = ('b' if gs.whiteToMove else 'w') + promotedPiece
 
                         moveMade = True
                         sqSelected = () # resetar selecao
@@ -77,7 +77,9 @@ def drawGameState(screen, gs):
     drawBoard(screen)  # draw squares on the board
     # add in piece highlighting or move suggestions (later)
     drawPieces(screen, gs.board)  # draw pieces on top of those squares
-    
+
+
+
 
 def drawBoard(screen):
     colors = [p.Color("white"), p.Color("gray")]
@@ -94,8 +96,45 @@ def drawPieces(screen, board):
             if piece != "--":  # not empty square
                 screen.blit(IMAGES[piece], p.Rect(c * SQ_SIZE, r * SQ_SIZE, SQ_SIZE, SQ_SIZE))
 
-def choosePromotionPiece(screen, isWhite):
-    pass                
+def choosePromotionPiece(screen, whiteToMove):
+    """
+    Exibe um menu simples para o jogador escolher a peça da promoção.
+    Retorna 'Q', 'R', 'B' ou 'N'.
+    """
+    p.font.init()
+    font = p.font.SysFont("Arial", 30, True)
+    color = "white" if whiteToMove else "black"
+    bg = p.Color("gray20")
+
+    options = ["Q", "R", "B", "N"]
+    running = True
+    while running:
+        screen.fill(bg)
+        for i, piece in enumerate(options):
+            label = font.render(f"Promover para: {piece}", True, p.Color("gold"))
+            rect = label.get_rect(center=(WIDTH // 2, 150 + i * 60))
+            screen.blit(label, rect)
+        p.display.flip()
+
+        for e in p.event.get():
+            if e.type == p.QUIT:
+                p.quit()
+                exit()
+            elif e.type == p.KEYDOWN:
+                if e.key == p.K_q:
+                    return "Q"
+                elif e.key == p.K_r:
+                    return "R"
+                elif e.key == p.K_b:
+                    return "B"
+                elif e.key == p.K_n:
+                    return "N"
+            elif e.type == p.MOUSEBUTTONDOWN:
+                x, y = p.mouse.get_pos()
+                for i, piece in enumerate(options):
+                    if 130 + i * 60 <= y <= 170 + i * 60:
+                        return piece
+
 
 if __name__ == "__main__":
     main()
