@@ -21,11 +21,29 @@ class GameState():
         self.blackKingLocation = (0, 4)
         self.pins = []
         self.checks = []
+
+        self.capturedWhitePieces = []
+        self.capturedBlackPieces = []
+
+
+
+
+    def makeMove(self, move, simulate=False): 
+        """
+        Executa um movimento no tabuleiro.
+        Se simulate=True, não registra capturas nem altera listas de peças capturadas.
+        """
+        # guarda a peça capturada antes de limpar
+        move.pieceCaptured = self.board[move.endRow][move.endCol]     
         
-
-
-
-    def makeMove(self, move):
+        # só adiciona capturas reais (e não em simulações)
+        if not simulate and move.pieceCaptured != "--":
+            if move.pieceCaptured[0] == "w":
+                self.capturedWhitePieces.append(move.pieceCaptured)
+            else:
+                self.capturedBlackPieces.append(move.pieceCaptured)
+                    
+        # aplica o movimento no tabuleiro
         self.board[move.startRow][move.startCol] = "--"
         self.board[move.endRow][move.endCol] = move.pieceMoved
         self.moveLog.append(move)
@@ -37,8 +55,7 @@ class GameState():
         elif move.pieceMoved == 'bK':
             self.blackKingLocation = (move.endRow, move.endCol)
 
-        #Promoção de peão não implementada
-
+        # promoção de peão
         if move.pieceMoved == 'wP' and move.endRow == 0:
             move.isPromotion = True
         elif move.pieceMoved == 'bP' and move.endRow == 7:
@@ -70,7 +87,7 @@ class GameState():
         validMoves = []
         for move in moves:
             # simula o movimento
-            self.makeMove(move)
+            self.makeMove(move,simulate=True)
 
             # quem moveu? (pode usar move.pieceMoved[0])
             moverColor = move.pieceMoved[0]  # 'w' ou 'b'

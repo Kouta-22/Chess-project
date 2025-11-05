@@ -1,9 +1,12 @@
 import pygame as p
 import ChessEngine
 
-WIDTH = HEIGHT = 512  # 400 is another option
+WIDTH = 640
+HEIGHT = 512  # 400 is another option
+BOARD_WIDTH = HEIGHT  # board is square
 DIMENSION = 8  # dimensions of a chess board
 SQ_SIZE = HEIGHT // DIMENSION
+SIDE_PANEL = WIDTH - BOARD_WIDTH
 MAX_FPS = 15  # for animations later on
 IMAGES = {}
 
@@ -65,7 +68,7 @@ def main():
             validMoves = gs.getValidMoves()
             moveMade = False
 
-        drawGameState(screen, gs)
+        drawGameState(screen, gs, validMoves, sqSelected)
         clock.tick(MAX_FPS)
         p.display.flip()
 
@@ -73,12 +76,28 @@ def main():
 
 
 
-def drawGameState(screen, gs):
+def drawGameState(screen, gs, validMoves, sqSelected):
     drawBoard(screen)  # draw squares on the board
     # add in piece highlighting or move suggestions (later)
+    highlightSquares(screen, gs, validMoves, sqSelected)
     drawPieces(screen, gs.board)  # draw pieces on top of those squares
+    drawSidePanel(screen, gs)  # draw the side panel with captured pieces
 
 
+def highlightSquares(screen, gs, validMoves, sqSelected):
+    if sqSelected != ():
+        r, c = sqSelected
+        if gs.board[r][c][0] == ('w' if gs.whiteToMove else 'b'): # sqSelected is a piece that can be moved
+            # highlight selected square
+            s = p.Surface((SQ_SIZE, SQ_SIZE))
+            s.set_alpha(100)  # transparency value -> 0 transparent; 255 opaque
+            s.fill(p.Color('blue'))
+            screen.blit(s, (c*SQ_SIZE, r*SQ_SIZE))
+            # highlight moves from that square
+            s.fill(p.Color('yellow'))
+            for move in validMoves:
+                if move.startRow == r and move.startCol == c:
+                    screen.blit(s, (move.endCol*SQ_SIZE, move.endRow*SQ_SIZE))
 
 
 def drawBoard(screen):
@@ -95,6 +114,33 @@ def drawPieces(screen, board):
             piece = board[r][c]
             if piece != "--":  # not empty square
                 screen.blit(IMAGES[piece], p.Rect(c * SQ_SIZE, r * SQ_SIZE, SQ_SIZE, SQ_SIZE))
+
+def drawSidePanel(screen, gs):
+    """
+    Mostra as peças capturadas no painel lateral.
+    """
+    panel_x = BOARD_WIDTH
+    p.draw.rect(screen, p.Color("lightgray"), p.Rect(panel_x, 0, SIDE_PANEL, HEIGHT))
+
+    font = p.font.SysFont("Arial", 20, True)
+    title_white = font.render("Pretas capturadas:", True, p.Color("black"))
+    title_black = font.render("Brancas capturadas:", True, p.Color("black"))
+
+    screen.blit(title_white, (panel_x + 5, 10))
+    screen.blit(title_black, (panel_x + 5, HEIGHT // 2 + 10))
+
+    # desenha as peças capturadas
+    for i, piece in enumerate(gs.capturedWhitePieces):
+        img = IMAGES[piece]
+        screen.blit(img, (panel_x + 10 + (i % 2) * 40, 40 + (i // 2) * 40))
+
+    for i, piece in enumerate(gs.capturedBlackPieces):
+        img = IMAGES[piece]
+        screen.blit(img, (panel_x + 10 + (i % 2) * 40, HEIGHT // 2 + 40 + (i // 2) * 40))
+
+
+
+
 
 def choosePromotionPiece(screen, whiteToMove):
     """
