@@ -1,5 +1,3 @@
-
-
 class GameState():
     def __init__(self):
         self.board = [
@@ -85,6 +83,9 @@ class GameState():
         """
         moves = self.getAllPossibleMoves()
         validMoves = []
+
+
+
         for move in moves:
             # simula o movimento
             self.makeMove(move,simulate=True)
@@ -103,9 +104,66 @@ class GameState():
             # desfaz a simulação
             self.undoMove()
 
+        if len(validMoves) == 0:
+            if self.inCheck():
+                self.checkMate = True
+                self.staleMate = False
+                self.draw = False
+            else:
+                self.checkMate = False
+                self.staleMate = True
+                self.draw = False
+        elif self.isInsufficientMaterial():
+            self.checkMate = False
+            self.staleMate = False
+            self.draw = True
+        else:
+            self.checkMate = False
+            self.staleMate = False
+            self.draw = False
+
         return validMoves
 
 
+
+    def isInsufficientMaterial(self):
+        """
+        Verifica se o material no tabuleiro é insuficiente para dar checkmate.
+        """
+        pieces = []
+        for row in self.board:
+            for square in row:
+                if square != "--":
+                    pieces.append(square)
+
+        # Filtra por tipo de peça
+        minorPieces = [p for p in pieces if p[1] in ['B', 'N']]
+        majorPieces = [p for p in pieces if p[1] in ['Q', 'R', 'P']]
+
+        # Rei x Rei
+        if len(pieces) == 2:
+            print("Empate: Rei vs Rei")
+            return True
+
+        # Rei + (Bispo ou Cavalo) x Rei
+        if len(pieces) == 3 and len(minorPieces) == 1:
+            return True
+
+        # Rei + Bispo x Rei + Bispo (mesma cor de casa)
+        if len(pieces) == 4 and all(p[1] == 'B' for p in minorPieces):
+            # Determina se os bispos estão em casas da mesma cor
+            bishopSquares = []
+            for r in range(8):
+                for c in range(8):
+                    if self.board[r][c] in ['wB', 'bB']:
+                        bishopSquares.append((r, c))
+            sameColor = all((r + c) % 2 == (bishopSquares[0][0] + bishopSquares[0][1]) % 2 for r, c in bishopSquares)
+            if sameColor:
+                return True
+
+        return False
+
+        
 #####
 ##
     def inCheck(self):

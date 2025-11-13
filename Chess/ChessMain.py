@@ -1,6 +1,7 @@
 import pygame as p
 import ChessEngine
 
+
 WIDTH = 640
 HEIGHT = 512  # 400 is another option
 BOARD_WIDTH = HEIGHT  # board is square
@@ -9,6 +10,7 @@ SQ_SIZE = HEIGHT // DIMENSION
 SIDE_PANEL = WIDTH - BOARD_WIDTH
 MAX_FPS = 15  # for animations later on
 IMAGES = {}
+clock = p.time.Clock()
 
 def loadImages():
     pieces = ['wP', 'wR', 'wN', 'wB', 'wQ', 'wK', 'bP', 'bR', 'bN', 'bB', 'bQ', 'bK']
@@ -76,12 +78,27 @@ def main():
 
 
 
-def drawGameState(screen, gs, validMoves, sqSelected):
+def drawGameState(screen, gs, validMoves, sqSelected,checkMate=False,staleMate=False,draw=False):
+
+
+
     drawBoard(screen)  # draw squares on the board
     # add in piece highlighting or move suggestions (later)
     highlightSquares(screen, gs, validMoves, sqSelected)
     drawPieces(screen, gs.board)  # draw pieces on top of those squares
     drawSidePanel(screen, gs)  # draw the side panel with captured pieces
+
+
+    if gs.checkMate:
+        winner = "Pretas" if gs.whiteToMove else "Brancas"
+        drawEndGameText(screen, f"Checkmate! {winner} vencem!")
+    elif gs.staleMate:
+        drawEndGameText(screen, "Empate por afogamento (Stalemate)!")
+    elif gs.draw:
+        drawEndGameText(screen, "Empate por material insuficiente!")
+
+    clock.tick(MAX_FPS)
+    p.display.flip()
 
 
 def highlightSquares(screen, gs, validMoves, sqSelected):
@@ -180,6 +197,24 @@ def choosePromotionPiece(screen, whiteToMove):
                 for i, piece in enumerate(options):
                     if 130 + i * 60 <= y <= 170 + i * 60:
                         return piece
+
+def drawEndGameText(screen, text):
+    """
+    Mostra uma mensagem centralizada no tabuleiro.
+    """
+    font = p.font.SysFont("Arial", 32, True, False)
+    textObject = font.render(text, True, p.Color("red"))
+    textLocation = p.Rect(0, 0, WIDTH, HEIGHT).move(WIDTH // 2 - textObject.get_width() // 2,
+                                                    HEIGHT // 2 - textObject.get_height() // 2)
+    screen.blit(textObject, textLocation)
+    # Adiciona uma sombra leve
+    screen.blit(font.render(text, True, p.Color("black")),
+                (textLocation.x + 2, textLocation.y + 2))
+
+
+
+
+
 
 
 if __name__ == "__main__":

@@ -1,0 +1,2 @@
+Ajutar undomove para quando voltar o movimento retirar a peça capturada da lista
+refatorar chechks
