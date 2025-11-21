@@ -17,8 +17,11 @@ class GameState():
 
         self.whiteKingLocation = (7, 4)
         self.blackKingLocation = (0, 4)
-        self.pins = []
-        self.checks = []
+
+        # ✅ INICIALIZADAS
+        self.checkMate = False
+        self.staleMate = False
+        self.draw = False
 
         self.capturedWhitePieces = []
         self.capturedBlackPieces = []
@@ -77,33 +80,33 @@ class GameState():
 
     # considera que todos os movimentos são cheks
     def getValidMoves(self):
-        """
-        Gera movimentos e filtra os que deixam o rei que acabou de mover em cheque.
-        Observação: assume que Move.pieceMoved foi preenchido corretamente na criação do Move.
-        """
         moves = self.getAllPossibleMoves()
         validMoves = []
 
-
-
         for move in moves:
-            # simula o movimento
-            self.makeMove(move,simulate=True)
-
-            # quem moveu? (pode usar move.pieceMoved[0])
-            moverColor = move.pieceMoved[0]  # 'w' ou 'b'
+            moverColor = move.pieceMoved[0]
             attackerColor = 'b' if moverColor == 'w' else 'w'
-            # posição do rei da cor que acabou de mover
+
+            # ✅ SIMULA movimento (NÃO salva posições do rei)
+            self.makeMove(move, simulate=True)
+
+            # Posição do rei DEPOIS do movimento
             kingRow, kingCol = (self.whiteKingLocation if moverColor == 'w'
                                 else self.blackKingLocation)
 
-            # se o rei do jogador que moveu NÃO estiver sob ataque do inimigo, o movimento é válido
+            # Verifica se o rei está em cheque
             if not self.squareUnderAttack(kingRow, kingCol, attackerColor):
                 validMoves.append(move)
 
-            # desfaz a simulação
+            # ✅ DESFAZ simulação (restaura TUDO automaticamente)
             self.undoMove()
 
+            # ❌❌❌ REMOVER COMPLETAMENTE esta parte ❌❌❌
+            # if move.pieceMoved[1] != 'K':
+            #     self.whiteKingLocation = kingPosWhite
+            #     self.blackKingLocation = kingPosBlack
+
+        # DETECÇÃO DE MATE / EMPATE
         if len(validMoves) == 0:
             if self.inCheck():
                 self.checkMate = True
@@ -167,23 +170,30 @@ class GameState():
 #####
 ##
     def inCheck(self):
+        """
+        Retorna True se o lado que está para jogar está em cheque.
+        Agora usa attackerColor corretamente.
+        """
         if self.whiteToMove:
-            return self.squareUnderAttack(self.whiteKingLocation[0], self.whiteKingLocation[1])
+            return self.squareUnderAttack(self.whiteKingLocation[0],
+                                        self.whiteKingLocation[1],
+                                        attackerColor="b")
         else:
-            return self.squareUnderAttack(self.blackKingLocation[0], self.blackKingLocation[1])
+            return self.squareUnderAttack(self.blackKingLocation[0],
+                                        self.blackKingLocation[1],
+                                        attackerColor="w")
         
 
-    def squareUnderAttack(self, r, c, attackerColor=None):
+    def squareUnderAttack(self, r, c, attackerColor):
         """
         Retorna True se a casa (r, c) está atacada por alguma peça da cor attackerColor.
         Se attackerColor for None, assume o inimigo baseado em self.whiteToMove (fallback).
         """
-        if attackerColor is None:
-            attackerColor = "b" if self.whiteToMove else "w"
+
 
         # 1. Peões (ataques diagonais)
         if attackerColor == "w":
-            pawnAttacks = [(1, -1), (1, 1)]  # brancos atacam pra cima (rei preto está acima)
+            pawnAttacks =  [(1, -1), (1, 1)] # brancos atacam pra cima (rei preto está acima)
         else:
             pawnAttacks = [(-1, -1), (-1, 1)]  # pretos atacam pra baixo (rei branco está abaixo)
 
